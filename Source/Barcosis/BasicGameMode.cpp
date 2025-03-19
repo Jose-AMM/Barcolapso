@@ -3,3 +3,14 @@
 
 #include "BasicGameMode.h"
 
+ABasicGameMode::ABasicGameMode()
+{
+}
+
+void ABasicGameMode::BeginPlay()
+{
+    Super::BeginPlay();
+
+    // Log a message when the level starts
+    UE_LOG(LogTemp, Log, TEXT("START"));
+}
