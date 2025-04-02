@@ -20,19 +20,5 @@ void UMenuWidget::NativeConstruct()
 
 void UMenuWidget::HoverButtonWithMouse(UButton* Button)
 {
-	if (bCanReceiveInput == true)
-	{
-		//ThrowHoverSFXFunction();
-		//ButtonFadeOutFunction(MenuNavigationIndex);
-
-		for (int i = 0; i < MenuItems.Num(); i++)
-		{
-			if (Cast<UButton>(MenuItems[i]) == Button)
-			{
-				MenuNavigationIndex = i;
-				//UpdateButtonState();
-				break;	// para salir en cuanto lo encuentre
-			}
-		}
-	}
+	// Hover SFX
 }

@@ -27,10 +27,10 @@ protected:
 	void OptionsFunction();
 
 	UFUNCTION()
-	void QuitGameFunction();
+	void CreditsFunction();
 
 	UFUNCTION()
-	void CreditsFunction();
+	void QuitGameFunction();
 
 	UFUNCTION()
 	void OnNewGameButtonHovered();
@@ -39,10 +39,10 @@ protected:
 	void OnOptionsButtonHovered();
 
 	UFUNCTION()
-	void OnQuitGameButtonHovered();
+	void OnCreditsButtonHovered();
 
 	UFUNCTION()
-	void OnCreditsButtonHovered();
+	void OnQuitGameButtonHovered();
 
 	/* ------ VARIABLES ------*/
 	UPROPERTY(meta = (BindWidget))
@@ -52,9 +52,9 @@ protected:
 	UButton* OptionsButton;
 
 	UPROPERTY(meta = (BindWidget))
-	UButton* QuitGameButton;
+	UButton* CreditsButton;
 
 	UPROPERTY(meta = (BindWidget))
-	UButton* CreditsButton;
+	UButton* QuitGameButton;
 
 };
