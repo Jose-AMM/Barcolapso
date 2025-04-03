@@ -3,6 +3,8 @@
 
 #include "HexGridManager.h"
 #include "HexTile.h"
+#include <Kismet/GameplayStatics.h>
+#include <ShipMovementComponent.h>
 
 // Sets default values
 AHexGridManager::AHexGridManager()
@@ -22,15 +24,16 @@ void AHexGridManager::BeginPlay()
 
 	switch (CoordsSystem)
 	{
-		case EHexCoordsSystem::OFFSET_SYSTEM:
-			BuildOffsetHexGrid();
-			break;
-		case EHexCoordsSystem::CUBE_SYSTEM:
-			BuildCubeHexGrid();
-			break;
-		default:
-			break;
+	case EHexCoordsSystem::OFFSET_SYSTEM:
+		BuildOffsetHexGrid();
+		break;
+	case EHexCoordsSystem::CUBE_SYSTEM:
+		BuildCubeHexGrid();
+		break;
+	default:
+		break;
 	}
+	Player = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
 }
 
 void AHexGridManager::BuildOffsetHexGrid()
@@ -90,6 +93,24 @@ FVector2D AHexGridManager::HexToPixel(FLayout layout, FVector hex)
 	float x = (m.F0 * hex.X + m.F1 * hex.Y) * layout.Size.X;
 	float y = (m.F2 * hex.X + m.F3 * hex.Y) * layout.Size.Y;
 	return FVector2D(x + layout.Origin.X, y + layout.Origin.Y);
+}
+
+bool AHexGridManager::IsANeighboringHexTile(AHexTile* TargetHexTile)
+{
+	bool result = false;
+	AHexTile* CurrentHexTile = Player->FindComponentByClass<UShipMovementComponent>()->GetCurrentHexTile();
+
+	for (int i = 0; i < HexDirections.Num(); ++i)
+	{
+		if (CurrentHexTile->Hex.Q + HexDirections[i].Q == TargetHexTile->Hex.Q &&
+			CurrentHexTile->Hex.R + HexDirections[i].R == TargetHexTile->Hex.R &&
+			CurrentHexTile->Hex.S + HexDirections[i].S == TargetHexTile->Hex.S)
+		{
+			result = true;
+			break;
+		}
+	}
+	return result;
 }
 
 void AHexGridManager::InstantiateCubeHexGrid(TSubclassOf<AHexTile> tileToSpawn, FVector2D pos, FVector hex)

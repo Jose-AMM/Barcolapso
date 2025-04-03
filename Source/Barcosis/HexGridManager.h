@@ -30,8 +30,8 @@ public:
 	}
 
 	FOrientation(double F0_, double F1_, double F2_, double F3_,
-				double B0_, double B1_, double B2_, double B3_,
-				double StartAngle_)
+		double B0_, double B1_, double B2_, double B3_,
+		double StartAngle_)
 		: F0(F0_), F1(F1_), F2(F2_), F3(F3_),
 		B0(B0_), B1(B1_), B2(B2_), B3(B3_),
 		StartAngle(StartAngle_)
@@ -84,7 +84,7 @@ private:
 	FOrientation LayoutPointy;
 	FOrientation LayoutFlat;
 	TArray <FHex> HexList;
-	
+
 	UPROPERTY(EditAnywhere, Category = "HexGrid|Layout")
 	int32 GridRings;
 
@@ -97,7 +97,14 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "HexGrid|Setup")
 	TSubclassOf<AHexTile> DefaultHexTile;
-	
+
+	const TArray<FHex> HexDirections = {
+		FHex(1, 0, -1), FHex(1, -1, 0), FHex(0, -1, 1),
+		FHex(-1, 0, 1), FHex(-1, 1, 0), FHex(0, 1, -1)
+	};
+
+	APawn* Player;
+
 public:
 	AHexGridManager();
 
@@ -107,5 +114,6 @@ protected:
 	void BuildCubeHexGrid();
 	void InstantiateCubeHexGrid(TSubclassOf<AHexTile> tileToSpawn, FVector2D pos, FVector hex);
 	FVector2D HexToPixel(FLayout layout, FVector hex);
+	bool IsANeighboringHexTile(AHexTile* HexTile);
 
 };
