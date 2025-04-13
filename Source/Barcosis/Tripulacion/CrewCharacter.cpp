@@ -1,11 +1,8 @@
 #include "Tripulacion/CrewCharacter.h"
 #include "Tripulacion/CrewActionGuerrero.h"
 #include "Tripulacion/CrewActionFilosofo.h"
-
 #include "Tripulacion/CrewActionNoble.h"
-
-
-
+#include "Tripulacion/InputRecruitComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 
@@ -49,36 +46,41 @@ void ACrewCharacter::BeginPlay()
     SphereTrigger->OnComponentBeginOverlap.AddDynamic(this, &ACrewCharacter::OnOverlapBegin);
 }
 
-void ACrewCharacter::OnOverlapBegin(
-    UPrimitiveComponent* OverlappedComponent,
-    AActor* OtherActor,
-    UPrimitiveComponent* OtherComp,
-    int32 OtherBodyIndex,
-    bool bFromSweep,
-    const FHitResult& SweepResult)
+void ACrewCharacter::OnOverlapBegin( UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
     if (GEngine)
     {
         FString TextoStats = FString::Printf(
-            TEXT("%s (%s)\nLogos: %d | Thymos: %d | Ethos: %d\nAisthesis: %d | Akousma: %d | Eukrasia: %d | Charis: %d"),
+            TEXT("%s (%s) | Logos: %d | Thymos: %d | Ethos: %d | Aisthesis: %d"),
             *NombreVisible,
             *UEnum::GetValueAsString(Arquetipo),
             Stats.Logos,
             Stats.Thymos,
             Stats.Ethos,
-            Stats.Aisthesis,
-            Stats.Akousma,
-            Stats.Eukrasia,
-            Stats.Charis
+            Stats.Aisthesis
         );
 
         GEngine->AddOnScreenDebugMessage(-1, 6.0f, FColor::Green, TextoStats);
+
+        FString Mensaje = FString::Printf(
+            TEXT("Quieres que %s se una a tu tripulacion? R (Reclutar) o T (Rechazar)"),
+            *NombreVisible
+        );
+
+        GEngine->AddOnScreenDebugMessage(-1, 6.0f, FColor::Cyan, Mensaje);
     }
 
     if (AccionEspecial)
     {
         AccionEspecial->EjecutarAccion();
     }
+
+    UInputRecruitComponent* RecruitComponent = FindComponentByClass<UInputRecruitComponent>();
+    if (RecruitComponent)
+    {
+        UInputRecruitComponent::ReclutacionActiva = RecruitComponent;
+    }
+
 }
 
 void ACrewCharacter::Tick(float DeltaTime)

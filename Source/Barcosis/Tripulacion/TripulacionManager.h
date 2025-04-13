@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "CrewStats.h"
+#include "TripulanteInfo.h"
 #include "TripulacionManager.generated.h"
 
 class ACrewCharacter;
@@ -12,6 +13,7 @@ enum class ERasgoPasivo : uint8
 {
     Ninguno,
     OjoDeAguila,
+    Duelista,
     Intimidante,
     Heroe,
     Asceta,
@@ -31,33 +33,26 @@ enum class EPasivaCapitan : uint8
     Suerte
 };
 
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class BARCOSIS_API UTripulacionManager : public UActorComponent
 {
     GENERATED_BODY()
 
 public:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TArray<ACrewCharacter*> Tripulantes;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    ACrewCharacter* Capitan;
+    UTripulacionManager();
 
-    UFUNCTION(BlueprintCallable)
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
     void AnadirTripulante(ACrewCharacter* Nuevo);
+    void MostrarTripulacion() const;
 
-    UFUNCTION(BlueprintCallable)
-    int32 ObtenerMaximoAtributo(FName NombreAtributo) const;
+private:
+    TArray<FTripulanteInfo> Tripulantes;
+    int32 CapitanIndex = -1;
 
-    UFUNCTION(BlueprintCallable)
-    int32 ObtenerSumaAtributo(FName NombreAtributo, float MultiplicadorCapitan = 2.0f) const;
+    int32 ObtenerAtributoMaximo(FName NombreAtributo) const;
+    int32 ObtenerAtributoTotal(FName NombreAtributo, float MultiplicadorCapitan = 2.0f) const;
 
-    UFUNCTION(BlueprintCallable)
-    void AplicarPasivaCapitan();
-
-    UFUNCTION(BlueprintCallable)
-    void EvaluarPhobos();
-
-    UFUNCTION(BlueprintCallable)
-    float CalcularReputacionTotal() const;
 };

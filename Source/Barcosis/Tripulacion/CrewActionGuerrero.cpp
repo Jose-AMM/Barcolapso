@@ -3,7 +3,7 @@
 
 void UCrewActionGuerrero::EjecutarAccion_Implementation()
 {
-    UE_LOG(LogTemp, Warning, TEXT("¡Guerrero ataca con fuerza!"));
+    UE_LOG(LogTemp, Warning, TEXT("¡Guerrero ataca!"));
 
     if (GEngine)
     {
