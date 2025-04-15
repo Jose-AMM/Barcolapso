@@ -26,17 +26,31 @@ public:
 
 private:
 	/* ------ MÉTODOS ------*/
-	void MoveToTargetHexTile();
+	void MoveToTargetHexTile(FHex TargetHexTile);
 
 	void MoveToTargetHexTileAnimator(float DeltaTime);
+
+	int Hex_distance(FHex a, FHex b);
+
+	std::vector<FHex> Hex_linedraw(FHex a, FHex b);
+
+	float Lerp(double a, double b, double t);
+
+	FFractionalHex Hex_lerp(FHex a, FHex b, double t);
+
+	FHex Hex_round(FFractionalHex h);
+
+	FHex Hex_subtract(FHex a, FHex b);
+
+	int Hex_length(FHex hex);
+
+	void Recorrido(AHexTile* HexTarget);
 
 	/* ------ VARIABLES ------*/
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float MovementTime;
 
 	AHexTile* CurrentHexTile;
-
-	AHexTile* TargetHexTile;
 
 	FVector CurrentPos;
 

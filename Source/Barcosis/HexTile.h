@@ -37,6 +37,24 @@ public:
 	}
 };
 
+USTRUCT(BlueprintType)
+struct FFractionalHex
+{
+	GENERATED_BODY()
+
+public:
+	double Q, R, S;
+
+	FFractionalHex() : Q(0), R(0), S(0)
+	{
+	}
+
+	FFractionalHex(double Q_, double R_, double S_)
+		: Q(Q_), R(R_), S(S_)
+	{
+	}
+};
+
 
 UCLASS()
 class BARCOSIS_API AHexTile : public AActor

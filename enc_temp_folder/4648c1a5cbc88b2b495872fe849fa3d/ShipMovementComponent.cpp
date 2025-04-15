@@ -28,22 +28,12 @@ void UShipMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	MoveToTargetHexTileAnimator(DeltaTime);
 }
 
-void UShipMovementComponent::MoveToTargetHexTile(FHex TargetHexTile)
+void UShipMovementComponent::MoveToTargetHexTile()
 {
 	Timer = 0.0f;
 	CurrentPos = CurrentHexTile->GetOwner()->GetActorLocation();
 	TargetPos = TargetHexTile->GetOwner()->GetActorLocation();
 	bMoveFlag = true;
-}
-
-void UShipMovementComponent::Recorrido(AHexTile* HexTarget)
-{
-	std::vector<FHex> Vector = Hex_linedraw(CurrentHexTile->Hex, HexTarget->Hex);
-
-	for (int i = 0; i < Vector.size(); ++i)
-	{
-		MoveToTargetHexTile(Vector[i]);
-	}
 }
 
 void UShipMovementComponent::MoveToTargetHexTileAnimator(float DeltaTime)
@@ -73,38 +63,34 @@ void UShipMovementComponent::SetCurrentHexTile(AHexTile* HexTile)
 
 // ---------------------
 
-float UShipMovementComponent::Lerp(double a, double b, double t)
+float lerp(double a, double b, double t)
 {
 	return a * (1 - t) + b * t;
 }
 
-FFractionalHex UShipMovementComponent::Hex_lerp(FHex a, FHex b, double t)
-{
+FFractionalHex hex_lerp(FHex a, FHex b, double t) {
 	return FFractionalHex(
-		Lerp(a.Q, b.Q, t),
-		Lerp(a.R, b.R, t),
-		Lerp(a.S, b.S, t)
+		lerp(a.Q, b.Q, t),
+		lerp(a.R, b.R, t),
+		lerp(a.S, b.S, t)
 	);
 }
 
-std::vector<FHex> UShipMovementComponent::Hex_linedraw(FHex a, FHex b)
-{
-	int N = Hex_distance(a, b);
+std::vector<FHex> hex_linedraw(FHex a, FHex b) {
+	int N = hex_distance(a, b);
 	std::vector<FHex> results = {};
 	double step = 1.0 / std::max(N, 1);
 	for (int i = 0; i <= N; i++) {
-		results.push_back(Hex_round(Hex_lerp(a, b, step * i)));
+		results.push_back(hex_round(hex_lerp(a, b, step * i)));
 	}
 	return results;
 }
 
-int UShipMovementComponent::Hex_distance(FHex a, FHex b)
-{
-	return Hex_length(Hex_subtract(a, b));
+int hex_distance(FHex a, FHex b) {
+	return hex_length(hex_subtract(a, b));
 }
 
-FHex UShipMovementComponent::Hex_round(FFractionalHex h)
-{
+FHex hex_round(FFractionalHex h) {
 	int q = int(round(h.Q));
 	int r = int(round(h.R));
 	int s = int(round(h.S));
@@ -123,12 +109,10 @@ FHex UShipMovementComponent::Hex_round(FFractionalHex h)
 	return FHex(q, r, s);
 }
 
-FHex UShipMovementComponent::Hex_subtract(FHex a, FHex b)
-{
+FHex hex_subtract(FHex a, FHex b) {
 	return FHex(a.Q - b.Q, a.R - b.R, a.S - b.S);
 }
 
-int UShipMovementComponent::Hex_length(FHex hex)
-{
+int hex_length(FHex hex) {
 	return int((abs(hex.Q) + abs(hex.R) + abs(hex.S)) / 2);
 }

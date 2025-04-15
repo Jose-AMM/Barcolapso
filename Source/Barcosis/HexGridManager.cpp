@@ -95,6 +95,16 @@ FVector2D AHexGridManager::HexToPixel(FLayout layout, FVector hex)
 	return FVector2D(x + layout.Origin.X, y + layout.Origin.Y);
 }
 
+//FFractionalHex AHexGridManager::PixelToHex(FLayout layout, Point p)
+//{
+//	const FOrientation& M = layout.Orientation;
+//	Point pt = Point((p.x - layout.origin.x) / layout.size.x,
+//		(p.y - layout.origin.y) / layout.size.y);
+//	double q = M.b0 * pt.x + M.b1 * pt.y;
+//	double r = M.b2 * pt.x + M.b3 * pt.y;
+//	return FractionalHex(q, r, -q - r);
+//}
+
 bool AHexGridManager::IsANeighboringHexTile(AHexTile* TargetHexTile)
 {
 	bool result = false;
