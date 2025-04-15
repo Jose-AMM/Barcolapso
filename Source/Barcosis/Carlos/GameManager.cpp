@@ -1,16 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Carlos/GameManager.h" // Make sure this path matches your project structure
+#include "Carlos/GameManager.h"
+#include "Carlos/FollowCamera.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
-#include "EngineUtils.h"  // For TActorIterator
+#include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Level.h"
 #include "Engine/LevelStreaming.h"
 #include "UObject/SoftObjectPath.h"
-#include "TimerManager.h" // Needed for GetTimerManager()
+#include "TimerManager.h"
 
 void UGameManager::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -48,6 +49,10 @@ void UGameManager::LoadAndConfigureBattleLevel(
 
 	// Clear any previous timer just in case
 	World->GetTimerManager().ClearTimer(ConfigureTimerHandle);
+
+	// Store the level asset reference for later unloading
+	CurrentBattleLevelAsset = LevelToLoadAsset.IsValid() ? LevelToLoadAsset : BattleLevelAsset;
+
 
 	// --- 1. Store desired meshes ---
 	MeshA = CustomMeshA;
@@ -170,6 +175,30 @@ void UGameManager::ConfigureMeshesInWorld()
 				UE_LOG(LogTemp, Log, TEXT("ConfigureMeshesInWorld: Set MeshFloor on actor '%s' with tag 'BattleFloor'"), *Actor->GetName());
 			}
 		}
+
+		if (Actor->ActorHasTag(FName("BattleFloor"))) {
+			// Set Camera to Target the Battle Floor
+			AFollowCamera* MainCamera = AFollowCamera::GetInstance(GetWorld());
+			MainCamera->SetCameraTarget(Actor, false);
+
+			// Teleport the Player to the Battle Floor position
+			APlayerController* PlayerController = World->GetFirstPlayerController();
+			if (PlayerController && PlayerController->GetPawn())
+			{
+				FVector TargetLocation = Actor->GetActorLocation();
+
+				TargetLocation.Z += 100.0f;
+
+				// Teleport the player's pawn to the target location
+				PlayerController->GetPawn()->SetActorLocation(TargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
+
+				UE_LOG(LogTemp, Log, TEXT("ConfigureMeshesInWorld: Teleported player to battle floor position."));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("ConfigureMeshesInWorld: Could not teleport player - PlayerController or Pawn is null."));
+			}
+		}
 	}
 	UE_LOG(LogTemp, Log, TEXT("ConfigureMeshesInWorld: Iteration complete. Found %d actors with StaticMeshComponents."), FoundCount);
 
@@ -179,7 +208,6 @@ void UGameManager::ConfigureMeshesInWorld()
 	if (!bMeshFloorSet) UE_LOG(LogTemp, Warning, TEXT("ConfigureMeshesInWorld: MeshFloor (Tag 'BattleFloor') not found or set."));
 }
 
-// UnloadBattleLevel unchanged (still blocking)
 void UGameManager::UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnloadAsset)
 {
 	UWorld* World = GetWorld();
@@ -189,7 +217,10 @@ void UGameManager::UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnloadAsset)
 		return;
 	}
 
-	const TSoftObjectPtr<UWorld>& LevelPtr = LevelToUnloadAsset.IsValid() ? LevelToUnloadAsset : BattleLevelAsset;
+	// Use the provided level asset, or fall back to the stored one, or finally to the default
+	const TSoftObjectPtr<UWorld>& LevelPtr = LevelToUnloadAsset.IsValid() ?
+		LevelToUnloadAsset : (CurrentBattleLevelAsset.IsValid() ?
+			CurrentBattleLevelAsset : BattleLevelAsset);
 
 	if (!LevelPtr.IsValid())
 	{
@@ -208,6 +239,34 @@ void UGameManager::UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnloadAsset)
 	UE_LOG(LogTemp, Log, TEXT("UnloadBattleLevel: Attempting to unload level by name derived from Soft Pointer: %s (%s)"), *LevelFName.ToString(), *LevelPtr.ToString());
 
 	UGameplayStatics::UnloadStreamLevel(this, LevelFName, FLatentActionInfo(), true); // Still blocking
+
+	// Reset the current battle level reference
+	if (CurrentBattleLevelAsset == LevelPtr)
+	{
+		CurrentBattleLevelAsset = nullptr;
+	}
+
+	// Set Camera to Target the Battle Floor
+	AFollowCamera* MainCamera = AFollowCamera::GetInstance(GetWorld());
+	MainCamera->SetCameraTargetToPlayer(false);
+
+	// Teleport the Player to the Battle Floor position
+	APlayerController* PlayerController = World->GetFirstPlayerController();
+	if (PlayerController && PlayerController->GetPawn())
+	{
+		FVector TargetLocation = FVector(830.0f, -140.0f, 0.0f);
+		// Optional: Add offset to prevent player from spawning inside floor
+		TargetLocation.Z += 100.0f; // Adjust this value as needed
+
+		// Teleport the player's pawn to the target location
+		PlayerController->GetPawn()->SetActorLocation(TargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
+
+		UE_LOG(LogTemp, Log, TEXT("ConfigureMeshesInWorld: Teleported player to battle floor position."));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ConfigureMeshesInWorld: Could not teleport player - PlayerController or Pawn is null."));
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("UnloadBattleLevel: UnloadStreamLevel (blocking) called for %s."), *LevelFName.ToString());
 }

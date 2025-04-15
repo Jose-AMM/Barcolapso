@@ -25,6 +25,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Battle Level", meta = (AllowedClasses = "World"))
 	TSoftObjectPtr<UWorld> BattleLevelAsset;
 
+	UPROPERTY(Transient)
+	TSoftObjectPtr<UWorld> CurrentBattleLevelAsset;
+
 	// Default spawn location if needed (LoadStreamLevel doesn't use it directly)
 	UPROPERTY(EditAnywhere, Category = "Battle Level")
 	FVector BattleInstanceSpawnLocation = FVector(-1150.0f, -7480.0f, 50.0f);
@@ -74,7 +77,7 @@ public:
 	 * @param LevelToUnloadAsset Optional override Soft Pointer for the level asset to unload. If invalid, uses BattleLevelAsset member.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Battle Level", meta = (DisplayName = "Unload Battle Level By Soft Pointer"))
-	void UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnloadAsset);
+	void UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnloadAsset = nullptr);
 
 private:
 	/**
