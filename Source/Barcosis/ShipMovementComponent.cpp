@@ -32,7 +32,7 @@ void UShipMovementComponent::MoveToTargetHexTile(FHex TargetHexTile)
 {
 	Timer = 0.0f;
 	CurrentPos = CurrentHexTile->GetOwner()->GetActorLocation();
-	TargetPos = TargetHexTile->GetOwner()->GetActorLocation();
+	//TargetPos = TargetHexTile->GetOwner()->GetActorLocation();
 	bMoveFlag = true;
 }
 
