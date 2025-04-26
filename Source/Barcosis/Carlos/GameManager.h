@@ -12,9 +12,7 @@ class ULevelStreaming;
 class AActor;
 class ACrewCharacter;
 
-/**
- * Manages loading and configuring battle levels additively using Soft Object Pointers (Asynchronously with frame delay).
- */
+
 UCLASS()
 class BARCOSIS_API UGameManager : public UGameInstanceSubsystem
 {

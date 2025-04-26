@@ -34,7 +34,6 @@ void UBattleLevelManager::Deinitialize()
 		World->GetTimerManager().ClearTimer(ConfigureTimerHandle);
 	}
 
-	// Clean up any remaining spawned actors if the subsystem is destroyed mid-battle
 	CleanupSpawnedBattleActors();
 
 	EnemyAClassToSpawn = nullptr;
@@ -65,11 +64,8 @@ void UBattleLevelManager::LoadAndConfigureBattleLevel(
 	World->GetTimerManager().ClearTimer(ConfigureTimerHandle);
 	CleanupSpawnedBattleActors();
 
-	// Store the level asset reference for later unloading
 	CurrentBattleLevelAsset = LevelToLoadAsset.IsValid() ? LevelToLoadAsset : BattleLevelAsset;
 
-
-	// --- 1. Store desired meshes ---
 	EnemyAClassToSpawn = InEnemyAClass;
 	EnemyBClassToSpawn = InEnemyBClass;
 	EnemyCClassToSpawn = InEnemyCClass;
@@ -77,13 +73,10 @@ void UBattleLevelManager::LoadAndConfigureBattleLevel(
 	UE_LOG(LogTemp, Log, TEXT("LoadAndConfigureBattleLevel: Storing configuration. EnemyA Class: %s, EnemyB Class: %s, EnemyC Class: %s"),
 		*GetNameSafe(InEnemyAClass), *GetNameSafe(InEnemyBClass), *GetNameSafe(InEnemyCClass));
 
-	// --- 2. Determine Level Asset Pointer ---
 	UE_LOG(LogTemp, Log, TEXT("LoadAndConfigureBattleLevel: Attempting to load level asset ASYNCHRONOUSLY: %s in World: %s"), *LevelToLoadAsset.ToString(), *World->GetName());
 
-	// --- 3. Load Level (Asynchronous) ---
 	UGameplayStatics::LoadStreamLevelBySoftObjectPtr(World, LevelToLoadAsset, true, false, FLatentActionInfo());
 
-	// --- 4. Bind Callback to Level Loaded Delegate ---
 	const FName LevelFName = LevelToLoadAsset.GetLongPackageFName();
 	if (LevelFName.IsNone())
 	{
@@ -96,14 +89,13 @@ void UBattleLevelManager::LoadAndConfigureBattleLevel(
 	if (StreamingLevel)
 	{
 		UE_LOG(LogTemp, Log, TEXT("LoadAndConfigureBattleLevel: Found StreamingLevel object for %s. Binding OnLevelLoaded delegate."), *LevelFName.ToString());
-		// Ensure only one binding if this function could be called rapidly
+
 		StreamingLevel->OnLevelLoaded.RemoveDynamic(this, &UBattleLevelManager::OnBattleLevelStreamLoaded);
 		StreamingLevel->OnLevelLoaded.AddDynamic(this, &UBattleLevelManager::OnBattleLevelStreamLoaded);
 	}
 	else
 	{
 		// This can happen if the level load fails very early or if called immediately after unload.
-		// The delegate might still get bound later if the streaming level object is created.
 		// Consider adding a fallback mechanism or more robust check if this proves problematic.
 		UE_LOG(LogTemp, Warning, TEXT("LoadAndConfigureBattleLevel: Could not find StreamingLevel object for %s immediately after LoadStreamLevel call. Delegate binding might be delayed or fail if load fails."), *LevelFName.ToString());
 	}
@@ -121,7 +113,6 @@ void UBattleLevelManager::OnBattleLevelStreamLoaded()
 		return;
 	}
 
-	// It's good practice to unbind the delegate now that it has served its purpose for this specific load.
 	if (CurrentBattleLevelAsset.IsValid()) {
 		const FName LevelFName = FName(*CurrentBattleLevelAsset.GetLongPackageName());
 		ULevelStreaming* StreamingLevel = UGameplayStatics::GetStreamingLevel(World, LevelFName);
@@ -142,7 +133,7 @@ void UBattleLevelManager::OnBattleLevelStreamLoaded()
 	World->GetTimerManager().SetTimer(
 		ConfigureTimerHandle,
 		this,
-		&UBattleLevelManager::DeferredConfigureBattle, // Call the renamed function
+		&UBattleLevelManager::DeferredConfigureBattle,
 		0.02f, // Slightly increased delay can sometimes help
 		false
 	);
@@ -151,7 +142,7 @@ void UBattleLevelManager::OnBattleLevelStreamLoaded()
 void UBattleLevelManager::DeferredConfigureBattle()
 {
 	UE_LOG(LogTemp, Log, TEXT("DeferredConfigureBattle: Timer finished. Proceeding with battle scene configuration."));
-	ConfigureBattleScene(); // Call the renamed function
+	ConfigureBattleScene();
 }
 
 
@@ -166,9 +157,6 @@ void UBattleLevelManager::ConfigureBattleScene()
 
 	UE_LOG(LogTemp, Log, TEXT("ConfigureBattleScene: Searching for BattleSpawnLocations and BattleFloor in World: %s"), *World->GetName());
 
-	// Clear any previously spawned actors before spawning new ones
-	// CleanupSpawnedBattleActors(); // Moved this to LoadAndConfigureBattleLevel start
-
 	// --- 1. Find BattleSpawnLocation Actors and Spawn Enemies ---
 	TArray<AActor*> FoundSpawnLocations;
 	UGameplayStatics::GetAllActorsOfClass(World, ABattleSpawnLocation::StaticClass(), FoundSpawnLocations);
@@ -177,7 +165,6 @@ void UBattleLevelManager::ConfigureBattleScene()
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	// Set Owner if needed, e.g., SpawnParams.Owner = this; or GetGameInstance() ?
 
 	for (AActor* Actor : FoundSpawnLocations)
 	{
@@ -193,7 +180,7 @@ void UBattleLevelManager::ConfigureBattleScene()
 
 		UE_LOG(LogTemp, Verbose, TEXT("ConfigureBattleScene: Checking Spawn Location '%s' with name '%s'."), *SpawnLocation->GetName(), *SpawnName);
 
-		AActor* SpawnedActor = nullptr; // To hold the result of SpawnActor
+		AActor* SpawnedActor = nullptr;
 
 		if (SpawnName == TEXT("EnemyA"))
 		{
@@ -250,13 +237,12 @@ void UBattleLevelManager::ConfigureBattleScene()
 			}
 		}
 
-		// If an actor was successfully spawned, add it to our tracking array
 		if (SpawnedActor)
 		{
 			SpawnedBattleActors.Add(SpawnedActor);
 		}
 
-	} // End loop through SpawnLocations
+	}
 
 	// --- 2. Find BattleFloor Actor and Configure Camera/Player/Mesh ---
 	TArray<AActor*> FoundFloorActors;
@@ -272,7 +258,7 @@ void UBattleLevelManager::ConfigureBattleScene()
 			UE_LOG(LogTemp, Log, TEXT("ConfigureBattleScene: Found BattleFloor actor '%s' with tag 'BattleFloor'."), *FloorActor->GetName());
 
 			// Set Camera Target
-			AFollowCamera* MainCamera = AFollowCamera::GetInstance(GetWorld()); // Replace with your actual camera access method
+			AFollowCamera* MainCamera = AFollowCamera::GetInstance(GetWorld());
 			if (MainCamera)
 			{
 				MainCamera->SetCameraTarget(FloorActor, false);
@@ -308,7 +294,7 @@ void UBattleLevelManager::ConfigureBattleScene()
 
 			// Set Floor Mesh
 			UStaticMeshComponent* FloorMeshComp = FloorActor->FindComponentByClass<UStaticMeshComponent>();
-			if (FloorMeshComp && MeshFloor) // Check if MeshFloor is valid
+			if (FloorMeshComp && MeshFloor)
 			{
 				FloorMeshComp->SetStaticMesh(MeshFloor);
 				UE_LOG(LogTemp, Log, TEXT("ConfigureBattleScene: Set MeshFloor on actor '%s'."), *FloorActor->GetName());
@@ -317,7 +303,7 @@ void UBattleLevelManager::ConfigureBattleScene()
 			{
 				UE_LOG(LogTemp, Warning, TEXT("ConfigureBattleScene: Found BattleFloor actor '%s' but GameManager::MeshFloor is null, cannot set mesh."), *FloorActor->GetName());
 			}
-			else // FloorMeshComp is null
+			else
 			{
 				UE_LOG(LogTemp, Warning, TEXT("ConfigureBattleScene: Found BattleFloor actor '%s' but it has no StaticMeshComponent."), *FloorActor->GetName());
 			}
@@ -335,7 +321,7 @@ void UBattleLevelManager::ConfigureBattleScene()
 
 	// --- 3. Final Logging ---
 	UE_LOG(LogTemp, Log, TEXT("ConfigureBattleScene: Configuration process complete. Spawned %d actors."), SpawnedBattleActors.Num());
-	if (!EnemyAClassToSpawn && FoundSpawnLocations.FindByPredicate([](AActor* A) { return Cast<ABattleSpawnLocation>(A) && Cast<ABattleSpawnLocation>(A)->SpawnLocationName == TEXT("EnemyA"); })) UE_LOG(LogTemp, Warning, TEXT("ConfigureBattleScene: 'EnemyA' spawn location found, but no class was provided to spawn."));
+	//if (!EnemyAClassToSpawn && FoundSpawnLocations.FindByPredicate([](AActor* A) { return Cast<ABattleSpawnLocation>(A) && Cast<ABattleSpawnLocation>(A)->SpawnLocationName == TEXT("EnemyA"); })) UE_LOG(LogTemp, Warning, TEXT("ConfigureBattleScene: 'EnemyA' spawn location found, but no class was provided to spawn."));
 	// Add similar checks for B and C if desired
 	if (!bFloorProcessed) UE_LOG(LogTemp, Warning, TEXT("ConfigureBattleScene: BattleFloor processing skipped (actor with tag 'BattleFloor' not found)."));
 
@@ -350,17 +336,15 @@ void UBattleLevelManager::UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnload
 		return;
 	}
 
-	// --- Clean up spawned actors BEFORE unloading the level ---
 	CleanupSpawnedBattleActors();
 
 	// Determine which level asset to unload
 	const TSoftObjectPtr<UWorld>& LevelPtr = LevelToUnloadAsset.IsValid() ?
-		LevelToUnloadAsset : CurrentBattleLevelAsset; // Use CurrentBattleLevelAsset, not the default BattleLevelAsset
+		LevelToUnloadAsset : CurrentBattleLevelAsset;
 
 	if (!LevelPtr.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UnloadBattleLevel: No valid level asset soft pointer provided or stored from previous load. Cannot determine level to unload."));
-		// Reset camera/player anyway? Or just return? Let's reset them.
 	}
 	else
 	{
@@ -374,16 +358,14 @@ void UBattleLevelManager::UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnload
 		{
 			UE_LOG(LogTemp, Log, TEXT("UnloadBattleLevel: Attempting to unload level: %s (%s)"), *LevelFName.ToString(), *LevelPtr.ToString());
 
-			FLatentActionInfo LatentInfo; // Still needed for unload
-			UGameplayStatics::UnloadStreamLevel(this, LevelFName, LatentInfo, true); // Still blocking unload for simplicity here
+			FLatentActionInfo LatentInfo;
+			UGameplayStatics::UnloadStreamLevel(this, LevelFName, LatentInfo, true);
 
 			UE_LOG(LogTemp, Log, TEXT("UnloadBattleLevel: UnloadStreamLevel call completed for %s."), *LevelFName.ToString());
 		}
 	}
 
-	// Reset the current battle level reference *after* attempting unload
 	CurrentBattleLevelAsset = nullptr;
-	// Also clear the spawn classes and mesh reference
 	EnemyAClassToSpawn = nullptr;
 	EnemyBClassToSpawn = nullptr;
 	EnemyCClassToSpawn = nullptr;
@@ -406,8 +388,7 @@ void UBattleLevelManager::UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnload
 	APlayerController* PlayerController = World->GetFirstPlayerController();
 	if (PlayerController && PlayerController->GetPawn())
 	{
-		// Define your default "out of battle" location
-		FVector DefaultWorldLocation = FVector(830.0f, -140.0f, 100.0f); // Example coordinates + Z offset
+		FVector DefaultWorldLocation = FVector(830.0f, -140.0f, 100.0f);
 		PlayerController->GetPawn()->SetActorLocation(DefaultWorldLocation, false, nullptr, ETeleportType::TeleportPhysics);
 		UE_LOG(LogTemp, Log, TEXT("UnloadBattleLevel: Teleported player back to default location %s."), *DefaultWorldLocation.ToString());
 	}
@@ -426,7 +407,7 @@ void UBattleLevelManager::CleanupSpawnedBattleActors()
 		UE_LOG(LogTemp, Log, TEXT("CleanupSpawnedBattleActors: Destroying %d previously spawned battle actors."), SpawnedBattleActors.Num());
 		for (TObjectPtr<AActor>& ActorPtr : SpawnedBattleActors)
 		{
-			if (ActorPtr) // Check if the pointer is valid and the actor hasn't been destroyed elsewhere
+			if (ActorPtr)
 			{
 				ActorPtr->Destroy();
 			}
@@ -434,6 +415,6 @@ void UBattleLevelManager::CleanupSpawnedBattleActors()
 		SpawnedBattleActors.Empty();
 	}
 	else {
-		// UE_LOG(LogTemp, Verbose, TEXT("CleanupSpawnedBattleActors: No actors in SpawnedBattleActors array to clean up."));
+		UE_LOG(LogTemp, Verbose, TEXT("CleanupSpawnedBattleActors: No actors in SpawnedBattleActors array to clean up."));
 	}
 }

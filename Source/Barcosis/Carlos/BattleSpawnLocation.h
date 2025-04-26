@@ -15,6 +15,7 @@ class BARCOSIS_API ABattleSpawnLocation : public ATargetPoint
 	GENERATED_BODY()
 	
 public:
+	// Simple ID para encontrarlos después
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Name")
 	FString SpawnLocationName = "EnemyA";
 };
