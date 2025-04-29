@@ -273,6 +273,7 @@ void UBattleLevelManager::ConfigureBattleScene()
 			}
 
 			// Teleport Player
+			/*
 			APlayerController* PlayerController = World->GetFirstPlayerController();
 			if (PlayerController)
 			{
@@ -291,7 +292,7 @@ void UBattleLevelManager::ConfigureBattleScene()
 			else {
 				UE_LOG(LogTemp, Warning, TEXT("ConfigureBattleScene: Could not get PlayerController to teleport player."));
 			}
-
+			*/
 			// Set Floor Mesh
 			UStaticMeshComponent* FloorMeshComp = FloorActor->FindComponentByClass<UStaticMeshComponent>();
 			if (FloorMeshComp && MeshFloor)
@@ -384,7 +385,7 @@ void UBattleLevelManager::UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnload
 	else {
 		UE_LOG(LogTemp, Warning, TEXT("UnloadBattleLevel: Could not find AFollowCamera instance to reset target."));
 	}
-
+	/*
 	APlayerController* PlayerController = World->GetFirstPlayerController();
 	if (PlayerController && PlayerController->GetPawn())
 	{
@@ -396,7 +397,7 @@ void UBattleLevelManager::UnloadBattleLevel(TSoftObjectPtr<UWorld> LevelToUnload
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UnloadBattleLevel: Could not teleport player back - PlayerController or Pawn is null."));
 	}
-
+	*/
 	UE_LOG(LogTemp, Log, TEXT("UnloadBattleLevel: Process finished."));
 }
 
