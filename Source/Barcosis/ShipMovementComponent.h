@@ -7,6 +7,8 @@
 #include <HexTile.h>
 #include "ShipMovementComponent.generated.h"
 
+class AHexGridManager;
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class BARCOSIS_API UShipMovementComponent : public USceneComponent
 {
@@ -25,26 +27,13 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
-	/* ------ MÉTODOS ------*/
-	void MoveToTargetHexTile(FHex TargetHexTile);
+	/* ------- METHODS -------*/
+	void NextHexTileCalculator();
 
-	void MoveToTargetHexTileAnimator(float DeltaTime);
+	void HexTilePathAnimator(float DeltaTime);
 
-	int Hex_distance(FHex a, FHex b);
-
-	std::vector<FHex> Hex_linedraw(FHex a, FHex b);
-
-	float Lerp(double a, double b, double t);
-
-	FFractionalHex Hex_lerp(FHex a, FHex b, double t);
-
-	FHex Hex_round(FFractionalHex h);
-
-	FHex Hex_subtract(FHex a, FHex b);
-
-	int Hex_length(FHex hex);
-
-	void Recorrido(AHexTile* HexTarget);
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void MouseTargetFunction(const FVector2D& MousePosition);
 
 	/* ------ VARIABLES ------*/
 	UPROPERTY(EditAnywhere, Category = "Movement")
@@ -52,20 +41,31 @@ private:
 
 	AHexTile* CurrentHexTile;
 
+	AHexTile* NextHexTile;
+
 	FVector CurrentPos;
 
 	FVector TargetPos;
 
 	float Timer;
 
-	bool bMoveFlag = false;
+	bool bIsStillMoving = false;
+
+	int HexPathCount;
 
 public:
-	/* ------ MÉTODOS ------*/
+	/* ------- METHODS -------*/
 	AHexTile* GetCurrentHexTile();
 
 	void SetCurrentHexTile(AHexTile* HexTile);
 
+	int GetHexPathCount() const { return HexPathCount; }
+
+	void SetHexPathCount(int Var) { HexPathCount = Var; }
+
 	/* ------ VARIABLES ------*/
+	AHexGridManager* HexGridManager;
+
+	TQueue<FHex> HexPath;
 
 };

@@ -33,7 +33,16 @@ void AHexGridManager::BeginPlay()
 	default:
 		break;
 	}
+
 	Player = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+	ShipMovement = Player->FindComponentByClass<UShipMovementComponent>();
+	if (ShipMovement)
+	{
+		ShipMovement->HexGridManager = this;
+		FHex Hex;
+		Hex.Q = 0, Hex.R = 0, Hex.S = 0;
+		ShipMovement->SetCurrentHexTile(GetHexTile(Hex));
+	}
 }
 
 void AHexGridManager::BuildOffsetHexGrid()
@@ -48,13 +57,13 @@ void AHexGridManager::BuildOffsetHexGrid()
 	{
 		for (int x = 0; x < GridWidth; ++x)
 		{
-			const bool oddRow = y % 2 == 1;
-			const float xPos = oddRow ? (x * TileHorizontalOffset) + OddRowHorizontalOffset : x * TileHorizontalOffset;
-			const float yPos = y * TileVerticalOffset;
+			const bool OddRow = y % 2 == 1;
+			const float XPos = OddRow ? (x * TileHorizontalOffset) + OddRowHorizontalOffset : x * TileHorizontalOffset;
+			const float YPos = y * TileVerticalOffset;
 
-			AHexTile* newTile = GetWorld()->SpawnActor<AHexTile>(DefaultHexTile, FVector(FIntPoint(xPos, yPos)), FRotator::ZeroRotator);
-			newTile->TileIndex = FIntPoint(x, y);
-			HexGrid2DArray[x][y] = newTile;
+			AHexTile* NewTile = GetWorld()->SpawnActor<AHexTile>(DefaultHexTile, FVector(FIntPoint(XPos, YPos)), FRotator::ZeroRotator);
+			NewTile->TileIndex = FIntPoint(x, y);
+			HexGrid2DArray[x][y] = NewTile;
 		}
 	}
 }
@@ -67,47 +76,81 @@ void AHexGridManager::BuildOffsetHexGrid()
 */
 void AHexGridManager::BuildCubeHexGrid()
 {
-	FVector origin = FVector(0.0, 0.0, 0.0);
-	FVector2D size = FVector2D(HexSize, HexSize);
-	FLayout layout = FLayout(LayoutPointy, size, FIntPoint(origin.X, origin.Y));
+	FVector Origin = FVector(0.0, 0.0, 0.0);
+	FVector2D Size = FVector2D(HexSize, HexSize);
+	FLayout Layout = FLayout(LayoutPointy, Size, FIntPoint(Origin.X, Origin.Y));
 
 	for (int q = -GridRings; q <= GridRings; ++q)
 	{
-		int r1 = std::max(-GridRings, -q - GridRings);
-		int r2 = std::min(GridRings, -q + GridRings);
+		int R1 = std::max(-GridRings, -q - GridRings);
+		int R2 = std::min(GridRings, -q + GridRings);
 
-		for (int r = r1; r <= r2; ++r)
+		for (int r = R1; r <= R2; ++r)
 		{
 			int s = -q - r;
 			HexList.Add(FHex(q, r, s));
 
 			FVector hexCoords = FVector(q, r, s);
-			InstantiateCubeHexGrid(DefaultHexTile, HexToPixel(layout, hexCoords), origin);
+			InstantiateCubeHexGrid(DefaultHexTile, HexToPixel(Layout, hexCoords), hexCoords);
 		}
 	}
 }
 
-FVector2D AHexGridManager::HexToPixel(FLayout layout, FVector hex)
+void AHexGridManager::InstantiateCubeHexGrid(TSubclassOf<AHexTile> TileToSpawn, FVector2D Pos, FVector Hex)
 {
-	FOrientation m = layout.Orientation;
-	float x = (m.F0 * hex.X + m.F1 * hex.Y) * layout.Size.X;
-	float y = (m.F2 * hex.X + m.F3 * hex.Y) * layout.Size.Y;
-	return FVector2D(x + layout.Origin.X, y + layout.Origin.Y);
+	AHexTile* NewTile = GetWorld()->SpawnActor<AHexTile>(TileToSpawn, FVector(FIntPoint(Pos.X, Pos.Y)), FRotator::ZeroRotator);
+	NewTile->Hex.Q = Hex.X;
+	NewTile->Hex.R = Hex.Y;
+	NewTile->Hex.S = Hex.Z;
+	HexTileList.Add(NewTile);
 }
 
-//FFractionalHex AHexGridManager::PixelToHex(FLayout layout, Point p)
-//{
-//	const FOrientation& M = layout.Orientation;
-//	Point pt = Point((p.x - layout.origin.x) / layout.size.x,
-//		(p.y - layout.origin.y) / layout.size.y);
-//	double q = M.b0 * pt.x + M.b1 * pt.y;
-//	double r = M.b2 * pt.x + M.b3 * pt.y;
-//	return FractionalHex(q, r, -q - r);
-//}
+AHexTile* AHexGridManager::GetHexTile(FHex Hex)
+{
+	AHexTile* HexTile = nullptr;
 
+	for (int i = 0; i < HexTileList.Num(); ++i)
+	{
+		if (Hex.Q == HexTileList[i]->Hex.Q &&
+			Hex.R == HexTileList[i]->Hex.R &&
+			Hex.S == HexTileList[i]->Hex.S)
+		{
+			HexTile = HexTileList[i];
+			break;
+		}
+	}
+	return HexTile;
+}
+
+void AHexGridManager::HexTilePainter(AHexTile* HexTile, bool IsHexTarget)
+{
+	UStaticMeshComponent* MeshComponent = HexTile->FindComponentByClass<UStaticMeshComponent>();
+	if (MeshComponent && TargetMaterial && PathMaterial)
+	{
+		if (IsHexTarget)
+		{
+			MeshComponent->SetMaterial(0, TargetMaterial);
+		}
+		else
+		{
+			MeshComponent->SetMaterial(0, PathMaterial);
+		}
+	}
+}
+
+void AHexGridManager::HexTileUnpainter(AHexTile* HexTile)
+{
+	UStaticMeshComponent* MeshComponent = HexTile->FindComponentByClass<UStaticMeshComponent>();
+	if (MeshComponent && OriginalMaterial)
+	{
+		MeshComponent->SetMaterial(0, OriginalMaterial);
+	}
+}
+
+// UNUSED!!
 bool AHexGridManager::IsANeighboringHexTile(AHexTile* TargetHexTile)
 {
-	bool result = false;
+	bool Result = false;
 	AHexTile* CurrentHexTile = Player->FindComponentByClass<UShipMovementComponent>()->GetCurrentHexTile();
 
 	for (int i = 0; i < HexDirections.Num(); ++i)
@@ -116,17 +159,84 @@ bool AHexGridManager::IsANeighboringHexTile(AHexTile* TargetHexTile)
 			CurrentHexTile->Hex.R + HexDirections[i].R == TargetHexTile->Hex.R &&
 			CurrentHexTile->Hex.S + HexDirections[i].S == TargetHexTile->Hex.S)
 		{
-			result = true;
+			Result = true;
 			break;
 		}
 	}
-	return result;
+	return Result;
 }
 
-void AHexGridManager::InstantiateCubeHexGrid(TSubclassOf<AHexTile> tileToSpawn, FVector2D pos, FVector hex)
+// --------------------- HEX LIBRARY ---------------------
+
+FVector2D AHexGridManager::HexToPixel(FLayout Layout, FVector Hex)
 {
-	AHexTile* newTile = GetWorld()->SpawnActor<AHexTile>(tileToSpawn, FVector(FIntPoint(pos.X, pos.Y)), FRotator::ZeroRotator);
-	newTile->Hex.Q = hex.X;
-	newTile->Hex.R = hex.Y;
-	newTile->Hex.S = hex.Z;
+	FOrientation M = Layout.Orientation;
+	float X = (M.F0 * Hex.X + M.F1 * Hex.Y) * Layout.Size.X;
+	float Y = (M.F2 * Hex.X + M.F3 * Hex.Y) * Layout.Size.Y;
+	return FVector2D(X + Layout.Origin.X, Y + Layout.Origin.Y);
+}
+
+float AHexGridManager::Lerp(double a, double b, double t)
+{
+	return a * (1 - t) + b * t;
+}
+
+FFractionalHex AHexGridManager::HexLerp(FHex A, FHex B, double T)
+{
+	return FFractionalHex(
+		Lerp(A.Q, B.Q, T),
+		Lerp(A.R, B.R, T),
+		Lerp(A.S, B.S, T)
+	);
+}
+
+void AHexGridManager::HexLinedraw(FHex A, FHex B)
+{
+	if (ShipMovement)
+	{
+		int Distance = HexDistance(A, B);
+		double Step = 1.0 / std::max(Distance, 1);
+		for (int i = 0; i <= Distance; i++)
+		{
+			FHex Hex = HexRound(HexLerp(A, B, Step * i));
+			ShipMovement->HexPath.Enqueue(Hex);
+			HexTilePainter(GetHexTile(Hex), i >= Distance);
+		}
+		ShipMovement->SetHexPathCount(++Distance);
+	}
+}
+
+int AHexGridManager::HexDistance(FHex A, FHex B)
+{
+	return HexLength(HexSubtract(A, B));
+}
+
+FHex AHexGridManager::HexRound(FFractionalHex H)
+{
+	int Q = int(round(H.Q));
+	int R = int(round(H.R));
+	int S = int(round(H.S));
+	double Q_diff = abs(Q - H.Q);
+	double R_diff = abs(R - H.R);
+	double S_diff = abs(S - H.S);
+	if (Q_diff > R_diff and Q_diff > S_diff) {
+		Q = -R - S;
+	}
+	else if (R_diff > S_diff) {
+		R = -Q - S;
+	}
+	else {
+		S = -Q - R;
+	}
+	return FHex(Q, R, S);
+}
+
+FHex AHexGridManager::HexSubtract(FHex A, FHex B)
+{
+	return FHex(A.Q - B.Q, A.R - B.R, A.S - B.S);
+}
+
+int AHexGridManager::HexLength(FHex Hex)
+{
+	return int((abs(Hex.Q) + abs(Hex.R) + abs(Hex.S)) / 2);
 }

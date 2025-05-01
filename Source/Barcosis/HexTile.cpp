@@ -12,5 +12,3 @@ AHexTile::AHexTile()
     TileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Tilemesh"));
     TileMesh->SetupAttachment(RootComponent);
 }
-
-

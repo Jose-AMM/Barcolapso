@@ -2,22 +2,18 @@
 
 
 #include "ShipMovementComponent.h"
+#include "HexGridManager.h"
 
 // Sets default values
 UShipMovementComponent::UShipMovementComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
 }
 
 // Called when the game starts
 void UShipMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
 
 // Called every frame
@@ -25,40 +21,51 @@ void UShipMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	MoveToTargetHexTileAnimator(DeltaTime);
+	HexTilePathAnimator(DeltaTime);
 }
 
-void UShipMovementComponent::MoveToTargetHexTile(FHex TargetHexTile)
+void UShipMovementComponent::HexTilePathAnimator(float DeltaTime)
+{
+	if (bIsStillMoving)
+	{
+		if (CurrentHexTile == NextHexTile)
+		{
+			if (HexPathCount <= 0)
+			{
+				bIsStillMoving = false;
+			}
+			else
+			{
+				HexGridManager->HexTileUnpainter(CurrentHexTile);
+				NextHexTileCalculator();
+			}
+		}
+		else
+		{
+			Timer += DeltaTime;
+			if (Timer > MovementTime)
+			{
+				Timer = MovementTime;
+				CurrentHexTile = NextHexTile;
+			}
+			FVector Position = FMath::Lerp(CurrentPos, TargetPos, Timer / MovementTime);
+			GetOwner()->SetActorLocation(Position);
+		}
+	}
+}
+
+void UShipMovementComponent::NextHexTileCalculator()
 {
 	Timer = 0.0f;
-	CurrentPos = CurrentHexTile->GetOwner()->GetActorLocation();
-	//TargetPos = TargetHexTile->GetOwner()->GetActorLocation();
-	bMoveFlag = true;
-}
 
-void UShipMovementComponent::Recorrido(AHexTile* HexTarget)
-{
-	std::vector<FHex> Vector = Hex_linedraw(CurrentHexTile->Hex, HexTarget->Hex);
+	FHex NextHex;
+	HexPath.Dequeue(NextHex);
+	--HexPathCount;
+	NextHexTile = HexGridManager->GetHexTile(NextHex);
 
-	for (int i = 0; i < Vector.size(); ++i)
-	{
-		MoveToTargetHexTile(Vector[i]);
-	}
-}
-
-void UShipMovementComponent::MoveToTargetHexTileAnimator(float DeltaTime)
-{
-	if (bMoveFlag)
-	{
-		Timer += DeltaTime;
-		if (Timer > MovementTime)
-		{
-			Timer = MovementTime;
-			bMoveFlag = false;
-		}
-		FVector Position = FMath::Lerp(CurrentPos, TargetPos, Timer / MovementTime);
-		GetOwner()->SetActorLocation(Position);
-	}
+	CurrentPos = CurrentHexTile->GetActorLocation();
+	TargetPos = HexGridManager->GetHexTile(NextHex)->GetActorLocation();
+	bIsStillMoving = true;
 }
 
 AHexTile* UShipMovementComponent::GetCurrentHexTile()
@@ -71,64 +78,55 @@ void UShipMovementComponent::SetCurrentHexTile(AHexTile* HexTile)
 	CurrentHexTile = HexTile;
 }
 
-// ---------------------
-
-float UShipMovementComponent::Lerp(double a, double b, double t)
+/*
+	Function that launches a Raycast from the camera to the mouse position on the screen and checks if it collides with an AHexTile type actor. If so, it 
+	calculates the path from the current position of the player to the destination.
+*/
+void UShipMovementComponent::MouseTargetFunction(const FVector2D& MousePosition)
 {
-	return a * (1 - t) + b * t;
-}
-
-FFractionalHex UShipMovementComponent::Hex_lerp(FHex a, FHex b, double t)
-{
-	return FFractionalHex(
-		Lerp(a.Q, b.Q, t),
-		Lerp(a.R, b.R, t),
-		Lerp(a.S, b.S, t)
-	);
-}
-
-std::vector<FHex> UShipMovementComponent::Hex_linedraw(FHex a, FHex b)
-{
-	int N = Hex_distance(a, b);
-	std::vector<FHex> results = {};
-	double step = 1.0 / std::max(N, 1);
-	for (int i = 0; i <= N; i++) {
-		results.push_back(Hex_round(Hex_lerp(a, b, step * i)));
+	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+	if (!PlayerController || !HexGridManager || bIsStillMoving)
+	{
+		return;
 	}
-	return results;
-}
 
-int UShipMovementComponent::Hex_distance(FHex a, FHex b)
-{
-	return Hex_length(Hex_subtract(a, b));
-}
+	FVector WorldLocation;
+	FVector WorldDirection;
 
-FHex UShipMovementComponent::Hex_round(FFractionalHex h)
-{
-	int q = int(round(h.Q));
-	int r = int(round(h.R));
-	int s = int(round(h.S));
-	double q_diff = abs(q - h.Q);
-	double r_diff = abs(r - h.R);
-	double s_diff = abs(s - h.S);
-	if (q_diff > r_diff and q_diff > s_diff) {
-		q = -r - s;
+	if (PlayerController->DeprojectScreenPositionToWorld(MousePosition.X, MousePosition.Y, WorldLocation, WorldDirection))
+	{
+		FVector Start = WorldLocation;
+		FVector End = Start + (WorldDirection * 10000.f);
+
+		FHitResult HitResult;
+		AActor* Owner = GetOwner();
+		FCollisionQueryParams TraceParams(FName(TEXT("MouseTrace")), true, Owner);
+		TraceParams.bReturnPhysicalMaterial = false;
+		TraceParams.AddIgnoredActor(Owner);
+
+		bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, TraceParams);
+
+		if (bHit && HitResult.GetActor())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Impactaste con: %s"), *HitResult.GetActor()->GetName());
+
+			if (HitResult.GetActor()->IsA(AHexTile::StaticClass()))
+			{
+				AHexTile* TargetHexTile = Cast<AHexTile>(HitResult.GetActor());
+				if (TargetHexTile)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("¡Impactaste un objeto de la clase correcta!"));
+
+					if (CurrentHexTile == TargetHexTile)
+					{
+						return;
+					}
+					HexGridManager->HexLinedraw(CurrentHexTile->Hex, TargetHexTile->Hex);
+					NextHexTile = CurrentHexTile;
+					bIsStillMoving = true;
+				}
+			}
+		}
+		DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, 2.0f, 0, 1.0f);
 	}
-	else if (r_diff > s_diff) {
-		r = -q - s;
-	}
-	else {
-		s = -q - r;
-	}
-	return FHex(q, r, s);
-}
-
-FHex UShipMovementComponent::Hex_subtract(FHex a, FHex b)
-{
-	return FHex(a.Q - b.Q, a.R - b.R, a.S - b.S);
-}
-
-int UShipMovementComponent::Hex_length(FHex hex)
-{
-	return int((abs(hex.Q) + abs(hex.R) + abs(hex.S)) / 2);
 }

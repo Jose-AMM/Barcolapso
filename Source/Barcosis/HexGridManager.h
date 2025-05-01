@@ -61,34 +61,64 @@ public:
 	}
 };
 
+class UShipMovementComponent;
 
 UCLASS()
 class BARCOSIS_API AHexGridManager : public AActor
 {
 	GENERATED_BODY()
 
-private:
-	// ---------- offset system ----------
-	TArray<TArray<AHexTile*>> HexGrid2DArray;
-	float TileHorizontalOffset;
-	float OddRowHorizontalOffset;
-	float TileVerticalOffset;
+public:
+	// Sets default values for this character's properties
+	AHexGridManager();
 
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+private:
+	/* ------- METHODS -------*/
+	void BuildOffsetHexGrid();
+
+	void BuildCubeHexGrid();
+
+	void InstantiateCubeHexGrid(TSubclassOf<AHexTile> TileToSpawn, FVector2D Pos, FVector Hex);
+
+	FVector2D HexToPixel(FLayout Layout, FVector Hex);
+
+	bool IsANeighboringHexTile(AHexTile* HexTile);
+
+	void OriginalHexTileMaterialReverter(float DeltaTime);
+
+	/* ------ VARIABLES ------*/
+	/* ---- offset system ----*/
 	UPROPERTY(EditAnywhere, Category = "HexGrid|Layout")
 	int32 GridWidth;
 
 	UPROPERTY(EditAnywhere, Category = "HexGrid|Layout")
 	int32 GridHeight;
 
-	// ---------- cube system ----------
+	TArray<TArray<AHexTile*>> HexGrid2DArray;
+
+	float TileHorizontalOffset;
+
+	float OddRowHorizontalOffset;
+
+	float TileVerticalOffset;
+
+	/* ----- cube system -----*/
 	FOrientation LayoutPointy;
+
 	FOrientation LayoutFlat;
+
 	TArray <FHex> HexList;
+
+	TArray <AHexTile*> HexTileList;
 
 	UPROPERTY(EditAnywhere, Category = "HexGrid|Layout")
 	int32 GridRings;
 
-	// ---------- both systems ----------
+	/* ----- both system -----*/
 	UPROPERTY(EditAnywhere, Category = "HexGrid|Layout")
 	float HexSize = 100.f;
 
@@ -98,6 +128,18 @@ private:
 	UPROPERTY(EditAnywhere, Category = "HexGrid|Setup")
 	TSubclassOf<AHexTile> DefaultHexTile;
 
+	UPROPERTY(EditAnywhere, Category = "HexGrid|Material")
+	UMaterialInterface* OriginalMaterial;
+
+	UPROPERTY(EditAnywhere, Category = "HexGrid|Material")
+	UMaterialInterface* PathMaterial;
+
+	UPROPERTY(EditAnywhere, Category = "HexGrid|Material")
+	UMaterialInterface* TargetMaterial;
+
+	UPROPERTY(EditAnywhere, Category = "Timer|Time")
+	float TargetedTime = 5.0f;
+
 	const TArray<FHex> HexDirections = {
 		FHex(1, 0, -1), FHex(1, -1, 0), FHex(0, -1, 1),
 		FHex(-1, 0, 1), FHex(-1, 1, 0), FHex(0, 1, -1)
@@ -105,15 +147,37 @@ private:
 
 	APawn* Player;
 
-public:
-	AHexGridManager();
+	AHexTile* TargetedHexTile;
 
-protected:
-	virtual void BeginPlay() override;
-	void BuildOffsetHexGrid();
-	void BuildCubeHexGrid();
-	void InstantiateCubeHexGrid(TSubclassOf<AHexTile> tileToSpawn, FVector2D pos, FVector hex);
-	FVector2D HexToPixel(FLayout layout, FVector hex);
-	bool IsANeighboringHexTile(AHexTile* HexTile);
+	UShipMovementComponent* ShipMovement;
+
+	bool bIsHexTileTargeted = false;
+
+	float Timer = 0.0f;
+
+public:
+	/* ------- METHODS -------*/
+	AHexTile* GetHexTile(FHex Hex);
+
+	void HexTilePainter(AHexTile* HexTile, bool bIsHexTarget);
+
+	void HexTileUnpainter(AHexTile* HexTile);
+
+	/* ----- hex library -----*/
+	float Lerp(double A, double B, double T);
+
+	FFractionalHex HexLerp(FHex A, FHex B, double T);
+
+	void HexLinedraw(FHex A, FHex B);
+
+	int HexDistance(FHex A, FHex B);
+
+	FHex HexRound(FFractionalHex H);
+
+	FHex HexSubtract(FHex A, FHex B);
+
+	int HexLength(FHex Hex);
+
+	/* ------ VARIABLES ------*/
 
 };
