@@ -20,6 +20,15 @@ void UTripulacionManager::TickComponent(float DeltaTime, ELevelTick TickType, FA
     }
 }
 
+void UTripulacionManager::Victoria(AActor* OtherActor)
+{
+    if (OtherActor && OtherActor->ActorHasTag("Fin"))
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, TEXT("VICTORIA HAS LLEGADO AL FINAL"));
+    }
+}
+
+
 void UTripulacionManager::AnadirTripulante(ACrewCharacter* Nuevo)
 {
     if (!Nuevo) return;
@@ -110,5 +119,111 @@ int32 UTripulacionManager::ObtenerAtributoTotal(FName NombreAtributo, float Mult
         Total += (i == CapitanIndex) ? Valor * MultiplicadorCapitan : Valor;
     }
     return Total;
+}
+
+void UTripulacionManager::RecibirAtaque(EArquetipo TipoEnemigo, int32 FuerzaEnemiga)
+{
+    TArray<int32> IndicesTipo;
+
+    for (int32 i = 0; i < Tripulantes.Num(); ++i)
+    {
+        if (Tripulantes[i].Arquetipo == TipoEnemigo)
+        {
+            IndicesTipo.Add(i);
+        }
+    }
+
+    if (IndicesTipo.Num() == 0)
+    {
+        int32 RandomIndex = FMath::RandRange(0, Tripulantes.Num() - 1);
+        FString Nombre = Tripulantes[RandomIndex].NombreVisible;
+        EliminarTripulante(RandomIndex);
+
+        GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Red, FString::Printf(TEXT("%s HA MUERTO. NO TENIAS GUERREROS"), *Nombre));
+        AplicarPenalizacionPorMuerte(TipoEnemigo);
+
+    }
+    else
+    {
+        int32 TotalFuerza = 0;
+        for (int32 Index : IndicesTipo)
+        {
+            TotalFuerza += Tripulantes[Index].Stats.Thymos;
+        }
+
+        if (FuerzaEnemiga > TotalFuerza)
+        {
+            FString Nombre = Tripulantes[IndicesTipo[0]].NombreVisible;
+            EliminarTripulante(IndicesTipo[0]);
+
+            GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Red, FString::Printf(TEXT("%s HA MUERTO. EL ENEMIGO ERA MAS FIERTE"), *Nombre));
+            AplicarPenalizacionPorMuerte(TipoEnemigo);
+
+        }
+        else
+        {
+   
+            GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Green, TEXT("EL ENEMIGO HA SIDO VENCIDO"));
+        }
+    }
+
+    Derrota();
+}
+
+void UTripulacionManager::EliminarTripulante(int32 Index)
+{
+    if (Index >= 0 && Index < Tripulantes.Num())
+    {
+        Tripulantes.RemoveAt(Index);
+        if (Index == CapitanIndex)
+        {
+            CapitanIndex = -1; // SI MUERE EL CAPITAN
+        }
+    }
+}
+
+bool UTripulacionManager::TieneTripulantes() const
+{
+    return Tripulantes.Num() > 0;
+}
+
+void UTripulacionManager::Derrota()
+{
+    if (Tripulantes.Num() == 0)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("HAS PERDIDO LOS TRIPULANTES HAN MUERTO"));
+    }
+}
+
+void UTripulacionManager::AplicarPenalizacionPorMuerte(EArquetipo TipoEliminado)
+{
+    for (int32 i = Tripulantes.Num() - 1; i >= 0; --i)
+    {
+        FTripulanteInfo& Tripulante = Tripulantes[i];
+
+        if (Tripulante.Arquetipo == TipoEliminado)
+            continue;
+
+        if (Tripulante.Arquetipo == EArquetipo::Filosofo)
+        {
+            Tripulante.Stats.Logos -= 5;
+        }
+      
+
+        if (Tripulante.Arquetipo != EArquetipo::Noble)
+        {
+            Tripulante.Stats.Ethos -= 3;
+        }
+
+        if (Tripulante.Stats.Logos < 0 || Tripulante.Stats.Ethos < 0 || Tripulante.Stats.Thymos < 0 || Tripulante.Stats.Aisthesis < 0)
+        {
+            FString Nombre = Tripulante.NombreVisible;
+
+            FString Despedida = FString::Printf(TEXT("%s: \"NO PUEDO SEGUIR CON ESTO... ME VOY\""), *Nombre);
+            GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Silver, Despedida);
+
+            Tripulantes.RemoveAt(i);
+        }
+    }
 }
 

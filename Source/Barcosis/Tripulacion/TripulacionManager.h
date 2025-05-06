@@ -48,6 +48,21 @@ public:
     void AnadirTripulante(ACrewCharacter* Nuevo);
     void MostrarTripulacion() const;
 
+    //
+    UFUNCTION(BlueprintCallable)
+    void RecibirAtaque(EArquetipo TipoEnemigo, int32 FuerzaEnemiga);
+    UFUNCTION(BlueprintCallable)
+    void EliminarTripulante(int32 Index);
+    UFUNCTION(BlueprintCallable)
+    bool TieneTripulantes() const;
+    UFUNCTION(BlueprintCallable)
+    void Derrota();
+    UFUNCTION(BlueprintCallable)
+    void Victoria(AActor* OtherActor);
+    void AplicarPenalizacionPorMuerte(EArquetipo TipoEliminado);
+
+
+
 private:
     TArray<FTripulanteInfo> Tripulantes;
     int32 CapitanIndex = -1;
