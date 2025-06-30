@@ -14,6 +14,7 @@ UShipMovementComponent::UShipMovementComponent()
 void UShipMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	//PrintCurrentMovementRange();
 }
 
 // Called every frame
@@ -33,10 +34,12 @@ void UShipMovementComponent::HexTilePathAnimator(float DeltaTime)
 			if (HexPathCount <= 0)
 			{
 				bIsStillMoving = false;
+				PrintCurrentMovementRange();
 			}
 			else
 			{
-				HexGridManager->HexTileUnpainter(CurrentHexTile);
+				UHexGridVisualComponent* HexGridVisual = const_cast<UHexGridVisualComponent*>(HexGridManager->GetHexGridVisual());
+				HexGridVisual->HexTilePainter(CurrentHexTile, HexGridVisual->GetDefaultMaterial());
 				NextHexTileCalculator();
 			}
 		}
@@ -128,5 +131,35 @@ void UShipMovementComponent::MouseTargetFunction(const FVector2D& MousePosition)
 			}
 		}
 		DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, 2.0f, 0, 1.0f);
+	}
+}
+
+void UShipMovementComponent::PrintCurrentMovementRange()
+{
+	UHexGridVisualComponent* HexGridVisual = const_cast<UHexGridVisualComponent*>(HexGridManager->GetHexGridVisual());
+	if (!HexGridVisual)
+	{
+		return;
+	}
+
+	int InfQ = CurrentHexTile->Hex.Q - MovementRange;
+	int SupQ = CurrentHexTile->Hex.Q + MovementRange;
+
+	//for (int q = -MovementRange; q <= MovementRange; ++q)
+	//for (int q = (CurrentHexTile->Hex.Q - MovementRange); q <= (CurrentHexTile->Hex.Q + MovementRange); ++q)
+	for (int q = InfQ; q <= SupQ; ++q)
+	{
+		int R1 = std::max(InfQ, -q - InfQ);
+		int R2 = std::min(SupQ, -q + SupQ);
+
+		for (int r = R1; r <= R2; ++r)
+		{
+			int s = -q - r;
+			/*HexList.Add(FHex(q, r, s));
+
+			FVector hexCoords = FVector(q, r, s);
+			InstantiateCubeHexGrid(DefaultHexTile, HexToPixel(Layout, hexCoords), hexCoords);*/
+			HexGridVisual->HexTilePainter(HexGridManager->GetHexTile(FHex(q, r, s)), HexGridVisual->GetRangeMaterial());
+		}
 	}
 }

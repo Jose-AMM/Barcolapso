@@ -32,12 +32,17 @@ private:
 
 	void HexTilePathAnimator(float DeltaTime);
 
+	void PrintCurrentMovementRange();
+
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void MouseTargetFunction(const FVector2D& MousePosition);
 
 	/* ------ VARIABLES ------*/
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float MovementTime;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	int MovementRange;
 
 	AHexTile* CurrentHexTile;
 

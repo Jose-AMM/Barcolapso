@@ -7,6 +7,8 @@
 #include "HexTile.h"
 #include "HexGridManager.generated.h"
 
+class UHexGridVisualComponent;
+
 UENUM()
 enum class EHexCoordsSystem : uint8
 {
@@ -69,11 +71,9 @@ class BARCOSIS_API AHexGridManager : public AActor
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	AHexGridManager();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 private:
@@ -88,7 +88,7 @@ private:
 
 	bool IsANeighboringHexTile(AHexTile* HexTile);
 
-	void OriginalHexTileMaterialReverter(float DeltaTime);
+	//void OriginalHexTileMaterialReverter(float DeltaTime);
 
 	/* ------ VARIABLES ------*/
 	/* ---- offset system ----*/
@@ -128,15 +128,6 @@ private:
 	UPROPERTY(EditAnywhere, Category = "HexGrid|Setup")
 	TSubclassOf<AHexTile> DefaultHexTile;
 
-	UPROPERTY(EditAnywhere, Category = "HexGrid|Material")
-	UMaterialInterface* OriginalMaterial;
-
-	UPROPERTY(EditAnywhere, Category = "HexGrid|Material")
-	UMaterialInterface* PathMaterial;
-
-	UPROPERTY(EditAnywhere, Category = "HexGrid|Material")
-	UMaterialInterface* TargetMaterial;
-
 	UPROPERTY(EditAnywhere, Category = "Timer|Time")
 	float TargetedTime = 5.0f;
 
@@ -151,6 +142,8 @@ private:
 
 	UShipMovementComponent* ShipMovement;
 
+	UHexGridVisualComponent* HexGridVisual;
+
 	bool bIsHexTileTargeted = false;
 
 	float Timer = 0.0f;
@@ -159,9 +152,7 @@ public:
 	/* ------- METHODS -------*/
 	AHexTile* GetHexTile(FHex Hex);
 
-	void HexTilePainter(AHexTile* HexTile, bool bIsHexTarget);
-
-	void HexTileUnpainter(AHexTile* HexTile);
+	const UHexGridVisualComponent* GetHexGridVisual() const { return HexGridVisual; }
 
 	/* ----- hex library -----*/
 	float Lerp(double A, double B, double T);

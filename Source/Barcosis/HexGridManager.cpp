@@ -5,6 +5,7 @@
 #include "HexTile.h"
 #include <Kismet/GameplayStatics.h>
 #include <ShipMovementComponent.h>
+#include <HexGridVisualComponent.h>
 
 // Sets default values
 AHexGridManager::AHexGridManager()
@@ -36,6 +37,7 @@ void AHexGridManager::BeginPlay()
 
 	Player = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
 	ShipMovement = Player->FindComponentByClass<UShipMovementComponent>();
+	HexGridVisual = FindComponentByClass<UHexGridVisualComponent>();
 	if (ShipMovement)
 	{
 		ShipMovement->HexGridManager = this;
@@ -122,31 +124,6 @@ AHexTile* AHexGridManager::GetHexTile(FHex Hex)
 	return HexTile;
 }
 
-void AHexGridManager::HexTilePainter(AHexTile* HexTile, bool IsHexTarget)
-{
-	UStaticMeshComponent* MeshComponent = HexTile->FindComponentByClass<UStaticMeshComponent>();
-	if (MeshComponent && TargetMaterial && PathMaterial)
-	{
-		if (IsHexTarget)
-		{
-			MeshComponent->SetMaterial(0, TargetMaterial);
-		}
-		else
-		{
-			MeshComponent->SetMaterial(0, PathMaterial);
-		}
-	}
-}
-
-void AHexGridManager::HexTileUnpainter(AHexTile* HexTile)
-{
-	UStaticMeshComponent* MeshComponent = HexTile->FindComponentByClass<UStaticMeshComponent>();
-	if (MeshComponent && OriginalMaterial)
-	{
-		MeshComponent->SetMaterial(0, OriginalMaterial);
-	}
-}
-
 // UNUSED!!
 bool AHexGridManager::IsANeighboringHexTile(AHexTile* TargetHexTile)
 {
@@ -192,7 +169,7 @@ FFractionalHex AHexGridManager::HexLerp(FHex A, FHex B, double T)
 
 void AHexGridManager::HexLinedraw(FHex A, FHex B)
 {
-	if (ShipMovement)
+	if (ShipMovement && HexGridVisual)
 	{
 		int Distance = HexDistance(A, B);
 		double Step = 1.0 / std::max(Distance, 1);
@@ -200,7 +177,14 @@ void AHexGridManager::HexLinedraw(FHex A, FHex B)
 		{
 			FHex Hex = HexRound(HexLerp(A, B, Step * i));
 			ShipMovement->HexPath.Enqueue(Hex);
-			HexTilePainter(GetHexTile(Hex), i >= Distance);
+			if (i >= Distance)
+			{
+				HexGridVisual->HexTilePainter(GetHexTile(Hex), HexGridVisual->GetTargetMaterial());
+			}
+			else
+			{
+				HexGridVisual->HexTilePainter(GetHexTile(Hex), HexGridVisual->GetPathMaterial());
+			}
 		}
 		ShipMovement->SetHexPathCount(++Distance);
 	}
