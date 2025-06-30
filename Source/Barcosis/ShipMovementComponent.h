@@ -8,6 +8,7 @@
 #include "ShipMovementComponent.generated.h"
 
 class AHexGridManager;
+class UHexGridVisualComponent;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class BARCOSIS_API UShipMovementComponent : public USceneComponent
@@ -28,11 +29,15 @@ public:
 
 private:
 	/* ------- METHODS -------*/
+	void Initialize();
+
 	void NextHexTileCalculator();
 
 	void HexTilePathAnimator(float DeltaTime);
 
-	void PrintCurrentMovementRange();
+	bool CheckMovementRange(AHexTile* TargetHexTile);
+
+	void PrintMovementRange(UMaterialInterface* Material);
 
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void MouseTargetFunction(const FVector2D& MousePosition);
@@ -47,6 +52,8 @@ private:
 	AHexTile* CurrentHexTile;
 
 	AHexTile* NextHexTile;
+
+	UHexGridVisualComponent* HexGridVisual;
 
 	FVector CurrentPos;
 

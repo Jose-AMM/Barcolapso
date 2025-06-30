@@ -14,7 +14,14 @@ UShipMovementComponent::UShipMovementComponent()
 void UShipMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	//PrintCurrentMovementRange();
+
+	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &UShipMovementComponent::Initialize);
+}
+
+void UShipMovementComponent::Initialize()
+{
+	HexGridVisual = const_cast<UHexGridVisualComponent*>(HexGridManager->GetHexGridVisual());
+	PrintMovementRange(const_cast<UMaterialInterface*>(HexGridVisual->GetRangeMaterial()));
 }
 
 // Called every frame
@@ -34,13 +41,16 @@ void UShipMovementComponent::HexTilePathAnimator(float DeltaTime)
 			if (HexPathCount <= 0)
 			{
 				bIsStillMoving = false;
-				PrintCurrentMovementRange();
+				PrintMovementRange(const_cast<UMaterialInterface*>(HexGridVisual->GetRangeMaterial()));
 			}
 			else
 			{
-				UHexGridVisualComponent* HexGridVisual = const_cast<UHexGridVisualComponent*>(HexGridManager->GetHexGridVisual());
-				HexGridVisual->HexTilePainter(CurrentHexTile, HexGridVisual->GetDefaultMaterial());
-				NextHexTileCalculator();
+				//HexGridVisual = const_cast<UHexGridVisualComponent*>(HexGridManager->GetHexGridVisual());
+				if (HexGridVisual)
+				{
+					HexGridVisual->HexTilePainter(CurrentHexTile, HexGridVisual->GetDefaultMaterial());
+					NextHexTileCalculator();
+				}
 			}
 		}
 		else
@@ -120,23 +130,43 @@ void UShipMovementComponent::MouseTargetFunction(const FVector2D& MousePosition)
 				{
 					UE_LOG(LogTemp, Warning, TEXT("¡Impactaste un objeto de la clase correcta!"));
 
-					if (CurrentHexTile == TargetHexTile)
+					if (CurrentHexTile == TargetHexTile || !CheckMovementRange(TargetHexTile))
 					{
+						DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 2.0f, 0, 0.5f);
 						return;
 					}
+					PrintMovementRange(const_cast<UMaterialInterface*>(HexGridVisual->GetDefaultMaterial()));
 					HexGridManager->HexLinedraw(CurrentHexTile->Hex, TargetHexTile->Hex);
 					NextHexTile = CurrentHexTile;
 					bIsStillMoving = true;
 				}
 			}
 		}
-		DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, 2.0f, 0, 1.0f);
+		DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, 2.0f, 0, 0.5f);
 	}
 }
 
-void UShipMovementComponent::PrintCurrentMovementRange()
+bool UShipMovementComponent::CheckMovementRange(AHexTile* TargetHexTile)
 {
-	UHexGridVisualComponent* HexGridVisual = const_cast<UHexGridVisualComponent*>(HexGridManager->GetHexGridVisual());
+	bool result;
+
+	if (std::abs(TargetHexTile->Hex.Q - CurrentHexTile->Hex.Q) <= MovementRange &&
+		std::abs(TargetHexTile->Hex.R - CurrentHexTile->Hex.R) <= MovementRange &&
+		std::abs(TargetHexTile->Hex.S - CurrentHexTile->Hex.S) <= MovementRange)
+	{
+		result = true;
+	}
+	else
+	{
+		result = false;
+	}
+
+	return result;
+}
+
+void UShipMovementComponent::PrintMovementRange(UMaterialInterface* Material)
+{
+	//HexGridVisual = const_cast<UHexGridVisualComponent*>(HexGridManager->GetHexGridVisual());
 	if (!HexGridVisual)
 	{
 		return;
@@ -147,10 +177,10 @@ void UShipMovementComponent::PrintCurrentMovementRange()
 
 	//for (int q = -MovementRange; q <= MovementRange; ++q)
 	//for (int q = (CurrentHexTile->Hex.Q - MovementRange); q <= (CurrentHexTile->Hex.Q + MovementRange); ++q)
-	for (int q = InfQ; q <= SupQ; ++q)
+	for (int q = -MovementRange; q <= MovementRange; ++q)
 	{
-		int R1 = std::max(InfQ, -q - InfQ);
-		int R2 = std::min(SupQ, -q + SupQ);
+		int R1 = std::max(-MovementRange, -q - MovementRange);
+		int R2 = std::min(MovementRange, -q + MovementRange);
 
 		for (int r = R1; r <= R2; ++r)
 		{
@@ -159,7 +189,11 @@ void UShipMovementComponent::PrintCurrentMovementRange()
 
 			FVector hexCoords = FVector(q, r, s);
 			InstantiateCubeHexGrid(DefaultHexTile, HexToPixel(Layout, hexCoords), hexCoords);*/
-			HexGridVisual->HexTilePainter(HexGridManager->GetHexTile(FHex(q, r, s)), HexGridVisual->GetRangeMaterial());
+			AHexTile* HexTile = HexGridManager->GetHexTile(FHex(q + CurrentHexTile->Hex.Q, r + CurrentHexTile->Hex.R, s + CurrentHexTile->Hex.S));
+			if (HexTile)
+			{
+				HexGridVisual->HexTilePainter(HexTile, Material);
+			}
 		}
 	}
 }
